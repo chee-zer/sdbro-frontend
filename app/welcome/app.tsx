@@ -22,6 +22,7 @@ export default function SystemDesignInterviewApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [messageInput, setMessageInput] = useState("")
   const [transcriptionText, setTranscriptionText] = useState("")
+  const [currentSessionId, setCurrentSessionId] = useState<string>("")
 
   // Audio recording states
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
@@ -210,7 +211,7 @@ export default function SystemDesignInterviewApp() {
   }, [])
 
   // Handle sending messages
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (messageInput.trim()) {
       const newMessage: ChatMessage = {
         id: Date.now().toString(),
@@ -220,45 +221,100 @@ export default function SystemDesignInterviewApp() {
         audioAvailable: isAudioMode,
         timestamp: new Date(),
       }
-// todo :: since these message get quite large not a good idea to store in memory 
+
       setChatMessages((prev) => [...prev, newMessage])
       setMessageInput("")
       setTranscriptionText("")
 
-      // todo :: send message to api and then stream response
-      // Simulate AI response after a delay
-      setTimeout(() => {
+      try {
+        const response = await fetch(`https://sd-bro-890380430815.asia-south1.run.app/chat/${currentSessionId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': '*/*',
+          },
+          body: JSON.stringify({
+            userMessage: newMessage.text,
+          }),
+        })
+
+        const data = await response.json()
+        const { message } = data
+
         const aiResponse: ChatMessage = {
           id: (Date.now() + 1).toString(),
           sender: "ai",
-          text: "That's a great point! Let me ask you a follow-up question to dive deeper into your solution...",
+          text: message,
           isTranscription: false,
           audioAvailable: true,
           timestamp: new Date(),
         }
+
         setChatMessages((prev) => [...prev, aiResponse])
-      }, 1500)
+      } catch (error) {
+        console.error("Error sending message:", error)
+        const errorResponse: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          sender: "ai",
+          text: "Failed to send the message. Please try again later.",
+          isTranscription: false,
+          audioAvailable: false,
+          timestamp: new Date(),
+        }
+        setChatMessages((prev) => [...prev, errorResponse])
+      }
     }
   }
 
   // Handle loading new blog
   // todo :: (1) first thing called after the blog is loaded 
-  const handleLoadBlog = (title: string, url: string, duration: number) => {
+  const handleLoadBlog = async (title: string, url: string, duration: number) => {
     setCurrentBlogTitle(title)
     setInterviewDuration(duration)
     setTimeRemaining(duration)
     setIsInterviewActive(true)
     setIsInterviewEnded(false)
-    setChatMessages([
-      {
-        id: Date.now().toString(),
-        sender: "ai",
-        text: `Hello! I'm your system design interviewer. I've loaded the blog "${title}". You have ${formatTime(duration)} for this interview. Let's begin! Please tell me what you understand about the problem we're trying to solve.`,
-        isTranscription: false,
-        audioAvailable: true,
-        timestamp: new Date(),
-      },
-    ])
+
+    try {
+      const response = await fetch('https://sd-bro-890380430815.asia-south1.run.app/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': '*/*',
+        },
+        body: JSON.stringify({
+          articleLink: url,
+          timeLimit: duration,
+        }),
+      })
+
+      const data = await response.json()
+      const { sessionId, message } = data
+      setCurrentSessionId(sessionId)
+
+      setChatMessages([
+        {
+          id: Date.now().toString(),
+          sender: "ai",
+          text: message,
+          isTranscription: false,
+          audioAvailable: true,
+          timestamp: new Date(),
+        },
+      ])
+    } catch (error) {
+      console.error("Error loading blog:", error)
+      setChatMessages([
+        {
+          id: Date.now().toString(),
+          sender: "ai",
+          text: `Failed to load the blog. Please try again later.`,
+          isTranscription: false,
+          audioAvailable: false,
+          timestamp: new Date(),
+        },
+      ])
+    }
   }
 
   // Handle conversation history click
