@@ -4,27 +4,27 @@ export const initialMessages: ChatMessage[] = [
   {
     id: "1",
     sender: "ai",
-    text: "Hello! I'm your system design interviewer. I've loaded the blog about designing a scalable notification system. Let's start with the basics - can you tell me what you understand about the requirements for a notification system that needs to handle millions of users?",
+    text: "Hello! I'm your system design interviewer for your practice. Please select a blog to get started",
     isTranscription: false,
-    audioAvailable: true,
-    timestamp: new Date(Date.now() - 300000),
-  },
-  {
-    id: "2",
-    sender: "user",
-    text: "A notification system for millions of users needs to be highly scalable, reliable, and support multiple delivery channels like push notifications, SMS, and email. It should handle different types of notifications with varying priorities.",
-    isTranscription: true,
     audioAvailable: false,
-    timestamp: new Date(Date.now() - 240000),
+    timestamp: new Date(Date.now()),
   },
-  {
-    id: "3",
-    sender: "ai",
-    text: "Excellent start! Now let's dive deeper into the architecture. How would you design the high-level components of this system? Think about the data flow from when a notification is triggered to when it reaches the user.",
-    isTranscription: false,
-    audioAvailable: true,
-    timestamp: new Date(Date.now() - 180000),
-  },
+  // {
+  //   id: "2",
+  //   sender: "user",
+  //   text: "A notification system for millions of users needs to be highly scalable, reliable, and support multiple delivery channels like push notifications, SMS, and email. It should handle different types of notifications with varying priorities.",
+  //   isTranscription: true,
+  //   audioAvailable: false,
+  //   timestamp: new Date(Date.now() - 240000),
+  // },
+  // {
+  //   id: "3",
+  //   sender: "ai",
+  //   text: "Excellent start! Now let's dive deeper into the architecture. How would you design the high-level components of this system? Think about the data flow from when a notification is triggered to when it reaches the user.",
+  //   isTranscription: false,
+  //   audioAvailable: true,
+  //   timestamp: new Date(Date.now() - 180000),
+  // },
 ]
 
 export const conversationHistory: ConversationHistory[] = [

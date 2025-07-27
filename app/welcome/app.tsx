@@ -13,18 +13,23 @@ import { formatTime } from "./utils/time";
 
 export default function SystemDesignInterviewApp() {
   // State management
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialMessages)  // TODO :: will be empty initially
-  const [currentBlogTitle, setCurrentBlogTitle] = useState("Designing a Scalable Notification System") // todo :: fetch and set
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialMessages)  // TODO :: will be empty initially and then set
+  const [currentBlogTitle, setCurrentBlogTitle] = useState("New conversation") // todo :: fetch and set
   const [isAudioMode, setIsAudioMode] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [recordingDuration, setRecordingDuration] = useState(0)
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false) // todo :: should it be collapsable ?
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [messageInput, setMessageInput] = useState("")
   const [transcriptionText, setTranscriptionText] = useState("")
 
-  const [interviewDuration, setInterviewDuration] = useState<number>(0) // in seconds // todo :: fetch form server
-  const [timeRemaining, setTimeRemaining] = useState<number>(0) // in seconds // todo :: in reality time should be returned continuosly form server never form frontend
+  // Audio recording states
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
+  const [audioStream, setAudioStream] = useState<MediaStream | null>(null)
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([])
+
+  const [interviewDuration, setInterviewDuration] = useState<number>(0) // in seconds todo :: fetch form server
+  const [timeRemaining, setTimeRemaining] = useState<number>(0) // in seconds  todo :: in reality time should be returned continuosly form server never form frontend
   const [isInterviewActive, setIsInterviewActive] = useState(false)
   const [isInterviewEnded, setIsInterviewEnded] = useState(false)
 
@@ -38,7 +43,6 @@ export default function SystemDesignInterviewApp() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [chatMessages])
 
-  // Todo :: check what is this for ???
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null
 
@@ -108,23 +112,102 @@ export default function SystemDesignInterviewApp() {
   }, [isAudioMode, isRecording, isInterviewEnded])
 
   // Start recording function
-  const startRecording = () => {
-    // todo :: actually record
-    setIsRecording(true)
-    setTranscriptionText("")
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      setAudioStream(stream)
+      
+      const recorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+      })
+      
+      const chunks: Blob[] = []
+      setAudioChunks(chunks)
+      
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data)
+        }
+      }
+      
+      recorder.onstop = () => {
+        const audioBlob = new Blob(chunks, { type: recorder.mimeType })
+        handleAudioRecorded(audioBlob)
+      }
+      
+      recorder.start()
+      setMediaRecorder(recorder)
+      setIsRecording(true)
+      setTranscriptionText("")
+    } catch (error) {
+      console.error('Error starting recording:', error)
+      // Fallback to simulated recording if permission denied
+      setIsRecording(true)
+      setTranscriptionText("")
+    }
   }
 
   // Stop recording function
   const stopRecording = () => {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop()
+      
+      // Stop all audio tracks
+      if (audioStream) {
+        audioStream.getTracks().forEach(track => track.stop())
+        setAudioStream(null)
+      }
+      
+      setMediaRecorder(null)
+    } else {
+      // Fallback for simulated recording
+      setTimeout(() => {
+        const simulatedTranscription =
+          "This is a simulated transcription of your speech. In a real implementation, this would be the actual speech-to-text result."
+        setTranscriptionText(simulatedTranscription)
+        setMessageInput(simulatedTranscription)
+      }, 500)
+    }
+    
     setIsRecording(false)
-    // todo send the recorded message and receive the transcption then set it
-    setTimeout(() => {
-      const simulatedTranscription =
-        "This is a simulated transcription of your speech. In a real implementation, this would be the actual speech-to-text result."
-      setTranscriptionText(simulatedTranscription)
-      setMessageInput(simulatedTranscription)
-    }, 500)
   }
+
+  // Handle recorded audio
+  const handleAudioRecorded = async (audioBlob: Blob) => {
+    try {
+      // TODO: Send audioBlob to your speech-to-text API
+      // const formData = new FormData()
+      // formData.append('audio', audioBlob, 'recording.webm')
+      // const response = await fetch('/api/transcribe', {
+      //   method: 'POST',
+      //   body: formData
+      // })
+      // const { transcription } = await response.json()
+      
+      // For now, simulate transcription
+      setTimeout(() => {
+        const simulatedTranscription = "This is your recorded speech transcribed using MediaRecorder API."
+        setTranscriptionText(simulatedTranscription)
+        setMessageInput(simulatedTranscription)
+      }, 500)
+    } catch (error) {
+      console.error('Error processing audio:', error)
+      setTranscriptionText("Error processing audio recording")
+      setMessageInput("")
+    }
+  }
+
+  // Cleanup effect for audio streams
+  useEffect(() => {
+    return () => {
+      if (audioStream) {
+        audioStream.getTracks().forEach(track => track.stop())
+      }
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop()
+      }
+    }
+  }, [])
 
   // Handle sending messages
   const handleSendMessage = () => {
@@ -178,7 +261,6 @@ export default function SystemDesignInterviewApp() {
     ])
   }
 
-  // todo :: see what is this for??
   // Handle conversation history click
   const handleHistoryClick = (conversation: ConversationHistory) => {
     setCurrentBlogTitle(conversation.title)
