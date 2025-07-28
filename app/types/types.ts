@@ -1,6 +1,6 @@
 export interface ChatMessage {
   id: string
-  sender: "user" | "ai"
+  sender: "user" | "SD Mate"
   text: string
   isTranscription: boolean
   audioAvailable: boolean
